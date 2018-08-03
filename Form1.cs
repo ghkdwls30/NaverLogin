@@ -18,21 +18,20 @@ namespace Youtube
     public partial class Form1 : Form
     {
         private const string START_PAGE_URL = "https://www.naver.com/";
-
+        private const string NAVER_LOGIN_URL = "https://nid.naver.com/nidlogin.login";
+                                                        
         ChromiumWebBrowser browser;
         List<AuthVO> authVOs = null;
                 
         Dictionary<string, object> programConfig = new Dictionary<string, object>();
         Dictionary<string, object> loveConfig = new Dictionary<string, object>();
         
-
-
         public Form1()
         {
             InitializeComponent();
         }
 
-        private void ChangeProxServer(string ip)
+        private async Task ChangeProxServerAsync(string ip)
         {
             Cef.UIThreadTaskFactory.StartNew(delegate
             {
@@ -96,7 +95,7 @@ namespace Youtube
         }
 
         // 쿠키 삭제 메소드
-        private void DeleteCookie()
+        private async Task DeleteCookieAsync()
         {
             Cef.GetGlobalCookieManager().DeleteCookies("", "");
         }       
@@ -147,37 +146,6 @@ namespace Youtube
             browser.GetBrowser().GetHost().SendKeyEvent(k);
 
             await Task.Delay(1000);
-        }
-
-        private async Task LoginYoutubeAsync( string username, string password, string mophnNo)
-        {
-            browser.Focus();
-
-            await EvaluateScriptAsync("document.querySelector('#text').click()");
-            await WaitForPageLoadingAsync();
-            await EvaluateScriptAsync("document.querySelector('#identifierId').focus()");
-            await EvaluateScriptAsync(String.Format("document.querySelector('#identifierId').value = '{0}'", username.Trim()));
-            await EvaluateScriptAsync("document.querySelector('#identifierNext').click()");
-            await EvaluateScriptAsync("document.querySelector('input[type=password]').focus()");
-            await EvaluateScriptAsync(String.Format("document.querySelector('input[type=password]').value = '{0}'", password.Trim()));
-            await EvaluateScriptAsync("document.querySelector('#passwordNext').click()");
-
-            // 로그인 대기 시간
-            await Task.Delay(3000);
-
-            // 복구 전화번호
-            JavascriptResponse x = await EvaluateScriptAsync("document.querySelector('[data-challengetype = \"13\"]') !== null");
-            if ((Boolean)getResult(x)) {
-                // 복구전화 클릭
-                await EvaluateScriptAsync("document.querySelector('[data-challengetype = \"13\"]').click()");
-                // 전화번호 입력
-                await EvaluateScriptAsync("document.querySelector('.whsOnd.zHQkBf').click()");
-                await EvaluateScriptAsync(String.Format("document.querySelector('.whsOnd.zHQkBf').value = '{0}'", mophnNo));
-                // 다음
-                await EvaluateScriptAsync("document.querySelector('.ZFr60d.CeoRYc').click()");
-            };
-
-            await WaitForPageLoadingAsync();
         }
 
         private object getResult(JavascriptResponse x)
@@ -245,23 +213,6 @@ namespace Youtube
             Close();
         }
 
-        private async Task ScrollBy(int height, int interval, int count)
-        {
-            int p = 0;
-            for (int i = 0; i < count; i++)
-            {
-                p += height;
-                await EvaluateScriptAsync("document.documentElement.scrollTop =" + p);                
-                await Task.Delay(interval);
-            }
-        }
-
-        private async Task ScrollAtCurrentPos(int height, int interval)
-        {
-            await EvaluateScriptAsync(String.Format("document.documentElement.scrollTop = (document.documentElement.scrollTop + {0})", height));
-            await Task.Delay(interval);
-        }
-
         private void AuthFileInitialize(string authFilePath)
         {
             string authLine, commentLine, urlLine;
@@ -290,11 +241,10 @@ namespace Youtube
             this.authVOs = configVOs;
         }
 
-    
-
-
         private async void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
+            label5.BackColor = Color.DarkOrange;
+            label5.Text = "Ready";
 
             AuthVO authVO = authVOs[dataGridView1.CurrentCell.RowIndex];
 
@@ -313,22 +263,21 @@ namespace Youtube
             label4.Text = authVO.ip;
 
             // 쿠키삭제
-            DeleteCookie();
-            await Task.Delay(1);
+            await DeleteCookieAsync();
 
             // 아이피 변경
-            ChangeProxServer( authVO.ip);
-            await Task.Delay(1);
+            await ChangeProxServerAsync(authVO.ip);
 
             // 네이버로 이동
-            await LoadPageAsync(browser, START_PAGE_URL);
+            await LoadPageAsync(browser, NAVER_LOGIN_URL);
 
             await EvaluateScriptAsync(String.Format("document.querySelector('#id').value = '{0}'", authVO.username));
 
             await EvaluateScriptAsync(String.Format("document.querySelector('#pw').value = '{0}'", authVO.password));
+            
+            label5.BackColor = Color.FromArgb(0, 216, 255);
+            label5.Text = "Complate";
 
-            await EvaluateScriptAsync("alert('맘대로 즐기세요')");
-          
         }
 
         private void label2_Click(object sender, EventArgs e)
@@ -347,6 +296,16 @@ namespace Youtube
         }
 
         private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label5_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label5_Click_1(object sender, EventArgs e)
         {
 
         }
